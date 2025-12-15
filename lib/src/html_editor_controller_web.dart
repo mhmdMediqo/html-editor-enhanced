@@ -55,9 +55,12 @@ class HtmlEditorController extends unsupported.HtmlEditorController {
   @override
   Future<String> getText() async {
     _evaluateJavascriptWeb(data: {'type': 'toIframe: getText'});
-    var e = await html.window.onMessage.firstWhere(
-        (element) => json.decode(element.data)['type'] == 'toDart: getText');
-    String text = json.decode(e.data)['text'];
+    var e = await html.window.onMessage.firstWhere((element) {
+      final data = _tryDecodeMessage(element.data);
+      return data?['type'] == 'toDart: getText';
+    });
+    final data = _tryDecodeMessage(e.data);
+    String text = data?['text'] ?? '';
     if (processOutputHtml &&
         (text.isEmpty ||
             text == '<p></p>' ||
@@ -73,9 +76,12 @@ class HtmlEditorController extends unsupported.HtmlEditorController {
     } else {
       _evaluateJavascriptWeb(data: {'type': 'toIframe: getSelectedText'});
     }
-    var e = await html.window.onMessage.firstWhere((element) =>
-        json.decode(element.data)['type'] == 'toDart: getSelectedText');
-    return json.decode(e.data)['text'];
+    var e = await html.window.onMessage.firstWhere((element) {
+      final data = _tryDecodeMessage(element.data);
+      return data?['type'] == 'toDart: getSelectedText';
+    });
+    final data = _tryDecodeMessage(e.data);
+    return data?['text'] ?? '';
   }
 
   /// Sets the text of the editor. Some pre-processing is applied to convert
@@ -233,9 +239,11 @@ class HtmlEditorController extends unsupported.HtmlEditorController {
       {bool hasReturnValue = false}) async {
     _evaluateJavascriptWeb(data: {'type': 'toIframe: $name'});
     if (hasReturnValue) {
-      var e = await html.window.onMessage.firstWhere(
-          (element) => json.decode(element.data)['type'] == 'toDart: $name');
-      return json.decode(e.data);
+      var e = await html.window.onMessage.firstWhere((element) {
+        final data = _tryDecodeMessage(element.data);
+        return data?['type'] == 'toDart: $name';
+      });
+      return _tryDecodeMessage(e.data);
     }
   }
 
@@ -312,6 +320,20 @@ class HtmlEditorController extends unsupported.HtmlEditorController {
       html = html.replaceAll('\n', '').replaceAll('\n\n', '');
     }
     return html;
+  }
+
+  Map<String, dynamic>? _tryDecodeMessage(dynamic raw) {
+    if (raw is! String) {
+      return null;
+    }
+    try {
+      final decoded = json.decode(raw);
+      if (decoded is Map<String, dynamic>) return decoded;
+      if (decoded is Map) return Map<String, dynamic>.from(decoded);
+    } catch (_) {
+      return null;
+    }
+    return null;
   }
 
   /// Helper function to run javascript and check current environment

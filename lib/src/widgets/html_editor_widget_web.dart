@@ -114,11 +114,19 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
           ''';
         if (p.onSelect != null) {
           html.window.onMessage.listen((event) {
-            var data = json.decode(event.data);
+            var raw = event.data;
+            if (raw is! String) return;
+            dynamic data;
+            try {
+              data = json.decode(raw);
+            } catch (_) {
+              return;
+            }
+            if (data is! Map) return;
             if (data['type'] != null &&
-                data['type'].contains('toDart:') &&
+                data['type'].toString().contains('toDart:') &&
                 data['view'] == createdViewId &&
-                data['type'].contains('onSelectMention')) {
+                data['type'].toString().contains('onSelectMention')) {
               p.onSelect!.call(data['value']);
             }
           });
@@ -514,8 +522,9 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
           if (data is! Map) {
             return;
           }
-          if (data['type'] != null &&
-              data['type'].contains('toDart: htmlHeight') &&
+          final type = data['type']?.toString();
+          if (type != null &&
+              type.contains('toDart: htmlHeight') &&
               data['view'] == createdViewId &&
               widget.htmlEditorOptions.autoAdjustHeight) {
             final docHeight = data['height'] ?? actualHeight;
@@ -528,8 +537,8 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
               });
             }
           }
-          if (data['type'] != null &&
-              data['type'].contains('toDart: onChangeContent') &&
+          if (type != null &&
+              type.contains('toDart: onChangeContent') &&
               data['view'] == createdViewId) {
             if (widget.callbacks != null &&
                 widget.callbacks!.onChangeContent != null) {
@@ -542,8 +551,8 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
                   curve: Curves.easeIn);
             }
           }
-          if (data['type'] != null &&
-              data['type'].contains('toDart: updateToolbar') &&
+          if (type != null &&
+              type.contains('toDart: updateToolbar') &&
               data['view'] == createdViewId) {
             if (widget.controller.toolbar != null) {
               // Ensure the map has correct type for updateToolbar function
@@ -721,38 +730,49 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
   /// Adds an event listener to check when a callback is fired
   void addJSListener(Callbacks c) {
     html.window.onMessage.listen((event) {
-      var data = json.decode(event.data);
-      if (data['type'] != null &&
-          data['type'].contains('toDart:') &&
-          data['view'] == createdViewId) {
-        if (data['type'].contains('onBeforeCommand')) {
+      var raw = event.data;
+      if (raw is! String) {
+        return;
+      }
+      dynamic data;
+      try {
+        data = json.decode(raw);
+      } catch (_) {
+        return;
+      }
+      if (data is! Map) {
+        return;
+      }
+      final type = data['type']?.toString();
+      if (type != null && type.contains('toDart:') && data['view'] == createdViewId) {
+        if (type.contains('onBeforeCommand')) {
           c.onBeforeCommand!.call(data['contents']);
         }
-        if (data['type'].contains('onChangeContent')) {
+        if (type.contains('onChangeContent')) {
           c.onChangeContent!.call(data['contents']);
         }
-        if (data['type'].contains('onChangeCodeview')) {
+        if (type.contains('onChangeCodeview')) {
           c.onChangeCodeview!.call(data['contents']);
         }
-        if (data['type'].contains('onDialogShown')) {
+        if (type.contains('onDialogShown')) {
           c.onDialogShown!.call();
         }
-        if (data['type'].contains('onEnter')) {
+        if (type.contains('onEnter')) {
           c.onEnter!.call();
         }
-        if (data['type'].contains('onFocus')) {
+        if (type.contains('onFocus')) {
           c.onFocus!.call();
         }
-        if (data['type'].contains('onBlur')) {
+        if (type.contains('onBlur')) {
           c.onBlur!.call();
         }
-        if (data['type'].contains('onBlurCodeview')) {
+        if (type.contains('onBlurCodeview')) {
           c.onBlurCodeview!.call();
         }
-        if (data['type'].contains('onImageLinkInsert')) {
+        if (type.contains('onImageLinkInsert')) {
           c.onImageLinkInsert!.call(data['url']);
         }
-        if (data['type'].contains('onImageUpload')) {
+        if (type.contains('onImageUpload')) {
           var map = <String, dynamic>{
             'lastModified': data['lastModified'],
             'lastModifiedDate': data['lastModifiedDate'],
@@ -765,14 +785,14 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
           var file = fileUploadFromJson(jsonStr);
           c.onImageUpload!.call(file);
         }
-        if (data['type'].contains('onImageUploadError')) {
+        if (type.contains('onImageUploadError')) {
           if (data['base64'] != null) {
             c.onImageUploadError!.call(
                 null,
                 data['base64'],
-                data['error'].contains('base64')
+                data['error'].toString().contains('base64')
                     ? UploadError.jsException
-                    : data['error'].contains('unsupported')
+                    : data['error'].toString().contains('unsupported')
                         ? UploadError.unsupportedFile
                         : UploadError.exceededMaxSize);
           } else {
@@ -788,32 +808,32 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
             c.onImageUploadError!.call(
                 file,
                 null,
-                data['error'].contains('base64')
+                data['error'].toString().contains('base64')
                     ? UploadError.jsException
-                    : data['error'].contains('unsupported')
+                    : data['error'].toString().contains('unsupported')
                         ? UploadError.unsupportedFile
                         : UploadError.exceededMaxSize);
           }
         }
-        if (data['type'].contains('onKeyDown')) {
+        if (type.contains('onKeyDown')) {
           c.onKeyDown!.call(data['keyCode']);
         }
-        if (data['type'].contains('onKeyUp')) {
+        if (type.contains('onKeyUp')) {
           c.onKeyUp!.call(data['keyCode']);
         }
-        if (data['type'].contains('onMouseDown')) {
+        if (type.contains('onMouseDown')) {
           c.onMouseDown!.call();
         }
-        if (data['type'].contains('onMouseUp')) {
+        if (type.contains('onMouseUp')) {
           c.onMouseUp!.call();
         }
-        if (data['type'].contains('onPaste')) {
+        if (type.contains('onPaste')) {
           c.onPaste!.call();
         }
-        if (data['type'].contains('onScroll')) {
+        if (type.contains('onScroll')) {
           c.onScroll!.call();
         }
-        if (data['type'].contains('characterCount')) {
+        if (type.contains('characterCount')) {
           widget.controller.characterCount = data['totalChars'];
         }
       }
