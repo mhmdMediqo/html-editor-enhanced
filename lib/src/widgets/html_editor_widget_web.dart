@@ -390,7 +390,6 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
               $userScripts
             }
           }
-        }
         
         function onSelectionChange() {
           let {anchorNode, anchorOffset, focusNode, focusOffset} = document.getSelection();
