@@ -228,10 +228,23 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
         console.log('done');
       
         function handleMessage(e) {
-          if (e && e.data && e.data.includes("toIframe:")) {
-            var data = JSON.parse(e.data);
-            if (data["view"].includes("$createdViewId")) {
-              if (data["type"].includes("getText")) {
+          if (!e || !e.data || typeof e.data !== "string" || !e.data.includes("toIframe:")) {
+            return;
+          }
+          var data;
+          try {
+            data = JSON.parse(e.data);
+          } catch (err) {
+            console.warn("html_editor_enhanced: ignored non-JSON postMessage", err);
+            return;
+          }
+          if (!data || !data["view"] || !String(data["view"]).includes("$createdViewId")) {
+            return;
+          }
+          if (typeof data["type"] !== "string") {
+            return;
+          }
+          if (data["type"].includes("getText")) {
                 var str = \$('#summernote-2').summernote('code');
                 window.parent.postMessage(JSON.stringify({"type": "toDart: getText", "text": str}), "*");
               }
@@ -490,7 +503,19 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
         var jsonStr = jsonEncoder.convert(data);
         var jsonStr2 = jsonEncoder.convert(data2);
         html.window.onMessage.listen((event) {
-          var data = json.decode(event.data);
+          var raw = event.data;
+          if (raw is! String) {
+            return;
+          }
+          dynamic data;
+          try {
+            data = json.decode(raw);
+          } catch (_) {
+            return;
+          }
+          if (data is! Map) {
+            return;
+          }
           if (data['type'] != null &&
               data['type'].contains('toDart: htmlHeight') &&
               data['view'] == createdViewId &&
@@ -523,7 +548,9 @@ class _HtmlEditorWidgetWebState extends State<HtmlEditorWidget> {
               data['type'].contains('toDart: updateToolbar') &&
               data['view'] == createdViewId) {
             if (widget.controller.toolbar != null) {
-              widget.controller.toolbar!.updateToolbar(data);
+              // Ensure the map has correct type for updateToolbar function
+              widget.controller.toolbar!
+                  .updateToolbar(Map<String, dynamic>.from(data));
             }
           }
         });
